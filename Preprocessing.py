@@ -5,7 +5,7 @@ import random
 import numpy as np
 import pandas as pd
 import simMetrics, simInstance from Similarity_metrics
-
+import scipy.stats
 
 # Read the dataset
 def readData(filename, rowindex, columnindex):
@@ -62,7 +62,7 @@ def findNeighbors(user, training, k):
     simDF_eskin = simDF.sort(['eskin'], ascending = False)
     neighbors_eskin = simDF_eskin.iloc[0:(k+1), [0, 3]]
 
-    return neighbors_overlap, neighbors_goodall, neighbors_eskin
+    return [neighbors_overlap, neighbors_goodall, neighbors_eskin]
 
 
 def computeRecommend(user, neighbors, test):
@@ -97,17 +97,64 @@ def predictCompare(user, scores):
             TN += 1
         else:
             FP += 1
-    return [TP, FN, TN, FP]
+    precision = float(TP) / (TP + FP)
+    recall = float(TP) / (TP + FN)
+    F1 = 2 * (precision * recall) / (precision + recall)
+    return [precision, recall, F1]
 
 
+def splitTrainTestRow(data, rowindex):
+    train = []
+    test = []
+    for i in range(len(data)):
+        if i in rowindex:
+            test.append(data[i])
+        else:
+            train.append(data[i])
+    return train, test
 
 
+def experiment(train, test, test_items, k):
+    all_prediction = []
+    for i in range(len(test)):
+        neighbors = findNeighbors(test[i], train, k)
+        all_pred = []
+        for j in range(len(neighbors)):
+            scores = computeRecommend(test[i], neighbors[j], test_items)
+            prediction = predictCompare(test[i], scores)
+            all_pred.append(prediction)
+        all_prediction.append(all_pred)
+
+    return all_prediction
 
 
+def computeperformance(predictions, nmetric=3):
+    all_precisions = []
+    all_recalls = []
+    all_f1s = []
+    for i in range(nmetric):
+        precisions = []
+        recalls = []
+        f1s = []
+        for j in range(len(predictions)):
+            precisions.append(predictions[j][i][0])
+            recalls.append(predictions[j][i][1])
+            f1s.append(predictions[j][i][2])
+        all_precisions.append(precisions)
+        all_recalls.append(recalls)
+        all_f1s.append(f1s)
+    return all_precisions, all_recalls, all_f1s
 
 
+def resultAnalysis(results):
+    avg0 = np.mean(results[0])
+    avg1 = np.mean(results[1])
+    avg2 = np.mean(results[2])
+    pvalue01 = scipy.stats.ttest_rel(results[0], results[1])[1]
+    pvalue02 = scipy.stats.ttest_rel(results[0], results[2])[1]
+    pvalue12 = scipy.stats.ttest_rel(results[1], results[2])[1]
 
-
+    return [avg0, avg1, avg2, pvalue01, pvalue02, pvalue12]
 
 
 if __name__ == "__main__":
@@ -122,3 +169,21 @@ if __name__ == "__main__":
     #randomly select 1,000 patients for testing
     rowindex1 = random.sample(range(0, 10000), 1000)
 
+    training_row, testing_row = splitTrainTestRow(data_traincol, rowindex1)
+
+    k = 20
+    all_predictions = experiment(training_row, testing_row, data_test_col, k)
+
+    precisions, recalls, f1s = computeperformance(all_predictions, nmetric=3)
+
+    results_precision = resultAnalysis(precisions)
+    print "Precisions:"
+    print results_precision
+
+    results_recall = resultAnalysis(recalls)
+    print "Recalls:"
+    print results_recall
+
+    results_f1 = resultAnalysis(f1s)
+    print "F1 Scores:"
+    print results_f1
