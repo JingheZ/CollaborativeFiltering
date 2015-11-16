@@ -1,6 +1,6 @@
 """
 Preprocess the Jester Dataset for collaborative filtering;
-Collaborative filtering for online joke recommendation 
+Collaborative filtering for online joke recommendation
 """
 import random
 import numpy as np
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     p_dict = varDistribution(training_row)
     k = 20
     all_predictions, all_neighbors = experiment(training_row, testing_row, data_test_col, p_dict, k, threshold=0.3)
-    'done!'
+
     precisions, recalls, f1s = computeperformance(all_predictions, nmetric=3)
 
     results_precision = resultAnalysis(precisions)
