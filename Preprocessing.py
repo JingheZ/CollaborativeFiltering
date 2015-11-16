@@ -1,5 +1,6 @@
 """
-Preprocess the Jester Dataset for collaborative filtering
+Preprocess the Jester Dataset for collaborative filtering;
+Collaborative filtering for online joke recommendation 
 """
 import random
 import numpy as np
